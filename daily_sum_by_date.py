@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Create day-wise sums for columns C and D from an Excel or CSV file.
+"""Create one daily summary row from an Excel or CSV file.
+
+Output columns:
+    SLAG_Date | Row_Count | HM_Temp_Mean_For_Cast_Total | HM_QTY_Total
 
 Example:
     python3 daily_sum_by_date.py input.xlsx
@@ -27,7 +30,7 @@ def load_data(path: Path) -> pd.DataFrame:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Sum HM_Temp_Mean_For_Cast and HM_QTY day-wise using SLAG_Date."
+        description="Create daily row counts and totals for columns C and D using SLAG_Date."
     )
     parser.add_argument("input_file", type=Path, help="Source .xlsx, .xls, or .csv file")
     parser.add_argument(
@@ -48,14 +51,20 @@ def main() -> None:
             f"Missing column(s): {', '.join(missing)}. Available: {', '.join(df.columns)}"
         )
 
-    df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN], errors="coerce")
+    # Convert the date and remove the time portion. This means, for example,
+    # 2026-05-21 08:00 and 2026-05-21 16:00 are counted as the same day.
+    df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN], errors="coerce").dt.normalize()
     df[COLUMN_C] = pd.to_numeric(df[COLUMN_C], errors="coerce").fillna(0)
     df[COLUMN_D] = pd.to_numeric(df[COLUMN_D], errors="coerce").fillna(0)
 
+    valid_rows = df.dropna(subset=[DATE_COLUMN])
     daily_totals = (
-        df.dropna(subset=[DATE_COLUMN])
-        .groupby(DATE_COLUMN, as_index=False)[[COLUMN_C, COLUMN_D]]
-        .sum()
+        valid_rows.groupby(DATE_COLUMN, as_index=False)
+        .agg(
+            Row_Count=(DATE_COLUMN, "size"),
+            HM_Temp_Mean_For_Cast_Total=(COLUMN_C, "sum"),
+            HM_QTY_Total=(COLUMN_D, "sum"),
+        )
         .sort_values(DATE_COLUMN)
     )
 
