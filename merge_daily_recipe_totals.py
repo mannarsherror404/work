@@ -192,3 +192,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# python merge_daily_recipe_totals.py --daily "input/input_daily_totals_no_outliers 2.xlsx" --recipe "input/recipe details.csv" --output "output/matched_daily_recipe_output.xlsx" 
